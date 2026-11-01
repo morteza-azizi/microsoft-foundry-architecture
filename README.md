@@ -7,7 +7,7 @@ Small, reproducible experiments for articles about Microsoft Foundry and enterpr
 | [Part 1. From first agent to production architecture](https://www.mortezaazizi.com/posts/microsoft-foundry-01-from-first-agent-to-production-architecture/) | [`01-agent-boundaries`](01-agent-boundaries/results.md) |
 | Part 2. Building an MCP server | [`02-mcp-server`](02-mcp-server/README.md) |
 
-Each article is one folder. The program, the prompts, and the recorded replies live there. Both use the agent `failed-message-advisor`. Part 1 stores a version with instructions and no tools. Part 2 stores a later version with the same instructions and one MCP tool. Record the version number the run prints. Running Part 1 again stores another version with no tools.
+Each article is one folder. The program, the prompts, and the recorded replies live there. The commands to create the Azure resources and run both experiments are in [runbook.md](runbook.md). Both use the agent `failed-message-advisor`. Part 1 stores a version with instructions and no tools. Part 2 stores a later version with the same instructions and one MCP tool. Record the version number the run prints. Running Part 1 again stores another version with no tools.
 
 ## Part 1
 
