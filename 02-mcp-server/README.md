@@ -36,17 +36,15 @@ export DeadLetter__OutOfScopeResponse=result
 
 Restart the server after changing it. The startup log states which mode is running.
 
-On a host other than localhost, set `AllowedHosts` to that host name. The checked-in value is `localhost;127.0.0.1`.
+On a host other than localhost, set `AllowedHosts` to that host name. The checked-in value is `localhost;127.0.0.1`. `AllowedHosts` checks the host header. It does not authenticate the caller.
 
 ```bash
 docker build -t dead-letter-mcp 02-mcp-server/DeadLetterMcp
 ```
 
-Agent Service cannot call localhost. It needs the public HTTPS URL of `/mcp`.
+Agent Service cannot call localhost. It needs the public HTTPS URL of `/mcp`. The image does not authenticate `/mcp`. A container and an HTTPS URL do not make this deployment production-secure. Any caller who can open the endpoint uses the process identity on Service Bus. The queue allow list is still enforced. See [auth.md](auth.md).
 
-The server does not check who is calling. Any caller who can reach it uses the process identity on Service Bus. That gap is the one the article names. The queue allow list is still enforced.
-
-The tool result is `exposed`, `messages`, and, only when the queue is refused with `result`, `refusal`. Each message carries `messageId`, `deadLetterReason`, `deadLetterErrorDescription`, `deliveryCount`, `enqueuedTime`, and at most 500 characters of `body`. The call is `PeekMessages` on the dead-letter sub-queue. There is no receive, complete, abandon, or dead-letter call in this project.
+The tool result is `exposed`, `messages`, and, only when the queue is refused with `result`, `refusal`. Each message carries `messageId`, `deadLetterReason`, `deadLetterErrorDescription`, `deliveryCount`, `enqueuedTime`, and at most 500 characters of `body`. That body text is untrusted input. It may contain sensitive data or instructions. The call is `PeekMessages` on the dead-letter sub-queue. There is no receive, complete, abandon, or dead-letter call in this project. The server log records the MCP method and, for a call, the tool name. It does not record arguments or message bodies.
 
 The MCP C# SDK turns an `McpException` thrown from a tool into a tool error result and includes the exception message. A direct client shows `An error occurred invoking 'peek_dead_letter':` and then that message. `McpProtocolException` is the type that also sets a JSON-RPC error code. Case 3a uses `McpException`, as the article's sample does. What Foundry does with that error is still the open question in the experiment.
 
@@ -73,7 +71,7 @@ dotnet run --project 02-mcp-server/AdvisorWithMcp -- version
 
 ## Cases 2, 3, and 4
 
-Seed, snapshot, run one prompt, snapshot again. Each prompt is a new conversation. The program prints the approval request and waits for `y` or `N`. A redirected stdin denies the call.
+Seed, snapshot, run one prompt, snapshot again. Each prompt is a new conversation. The program prints the approval request and waits for `y` or `N`. A redirected stdin denies the call. Record a snapshot only when `QueuePrep` prints `Snapshot complete` and exits 0. Any other snapshot output is incomplete and is not the before or after state.
 
 ```bash
 dotnet run --project 02-mcp-server/QueuePrep -- seed normal
@@ -91,7 +89,7 @@ dotnet run --project 02-mcp-server/QueuePrep -- seed injection
 dotnet run --project 02-mcp-server/AdvisorWithMcp -- 4
 ```
 
-`seed normal` and `seed injection` drain the `orders` dead-letter sub-queue, then dead-letter one new message. Both use the reason `MissingCorrelationId`. The injection seed differs only in the body. `seed` refuses every queue except `orders` and `orders-scratch`.
+`seed normal` and `seed injection` first drain the `orders` dead-letter sub-queue. `seed scratch` first drains the active queue of `orders-scratch`. Draining receives each message and completes it, which removes it. The command then sends the new message. Both `orders` seeds use the reason `MissingCorrelationId`. The injection seed differs only in the body. No other queue is accepted. If the drain stops at 50, messages may remain, and the queue does not hold only the seeded message.
 
 ## Case 5. Identity
 
@@ -102,4 +100,4 @@ dotnet run --project 02-mcp-server/QueuePrep -- seed scratch
 dotnet run --project 02-mcp-server/IdentityProbe
 ```
 
-The probe refuses `orders` and any name that does not end with `-scratch`. A local `az login` is your user, not the server identity, unless `AZURE_CLIENT_ID` and the related credential variables select that principal.
+The probe refuses `orders` and any name that does not end with `-scratch`. A local `az login` is your user, not the server identity, unless `AZURE_CLIENT_ID` and the related credential variables select that principal. Each operation is printed as `Allowed`, `Denied`, or `Inconclusive`. `Denied` is an authorization failure from the exception type or HTTP status. `Inconclusive` is any other failure, and the exception text is printed under it. `Not attempted` means that operation was not run.

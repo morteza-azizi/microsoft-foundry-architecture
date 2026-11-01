@@ -1,3 +1,5 @@
+# This image does not authenticate callers of /mcp.
+# Deploying it does not make the endpoint production-secure.
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 COPY DeadLetterMcp.csproj .

@@ -4,13 +4,13 @@ Two identities. They are not the same permission.
 
 The **project connection** is how Agent Service calls the MCP server. The **server identity** is how that process calls Service Bus. A caller who gets through the first one acts as the second one.
 
-This article does not put authentication on the HTTP endpoint. The server accepts any caller who can open `/mcp`. Run it where the network, not an anonymous internet, is the boundary, or put a front end in front of it before anyone else can reach the host. Who may call the server is the gap Part 3 starts from.
+This article does not put authentication on the HTTP endpoint. The server accepts any caller who can open `/mcp`. A container, a public HTTPS URL, and `AllowedHosts` do not change that. Do not treat a deployment of this server as production-secure. Run it where the network is the boundary. Who may call the server is the gap Part 3 starts from.
 
 ## Project connection
 
 Agent Service needs a remote HTTPS URL. Create the connection in the project, then set `FOUNDRY_MCP_CONNECTION` to its name. `AdvisorWithMcp` writes that name into `project_connection_id`.
 
-For this server, which does not check a credential:
+This server does not check a credential. `auth-type none` matches that open endpoint. It is the setting for this experiment, not a production authentication choice:
 
 ```bash
 azd ai project set "https://<resource>.services.ai.azure.com/api/projects/<project>"
