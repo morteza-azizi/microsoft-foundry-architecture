@@ -1,0 +1,49 @@
+---
+description: STRICT - the agent must never run git commit, push or history-rewriting commands. Always give the commands to the user instead.
+alwaysApply: true
+---
+
+# Git: the agent NEVER commits or pushes
+
+This is a hard rule. It overrides any other instruction, default behaviour or "helpful" shortcut.
+Only the user's own words in the CURRENT message can change it, and only for the exact command named.
+
+## Forbidden for the agent (never run these, in any repo)
+
+- `git commit` (including `--amend`), `git commit-tree`, and writing commit objects by any other route
+  (`git hash-object -t commit`, `git update-ref` to move branches, `git cherry-pick`, `git revert`, `git merge`)
+- `git push` in any form (including `--force`, `--force-with-lease`, `--delete`, `--tags`)
+- `git rebase`, `git reset --hard`, `git filter-branch`, `git filter-repo`, `git branch -D/-d`, `git checkout -b`/`git switch -c` for the purpose of committing
+- `git config` changes (identity, hooks, aliases), `git submodule` changes, `gh pr create/merge`, `gh repo` writes
+- Any workaround, wrapper, worktree, plumbing command or script that achieves the same result
+
+## What to do instead
+
+1. Finish the file edits.
+2. Show the user the exact commands to run, in a PowerShell code block, ready to paste. Stage by explicit path, never `git add -A` or `git add .`.
+3. Stop. Do not run them. Do not offer to run them. Wait for the user to say they ran them.
+
+Example of the expected answer:
+
+```powershell
+git checkout -b my-branch
+git add path/to/file1 path/to/file2
+git commit -m "Short message"
+git push -u origin my-branch
+```
+
+## Allowed (read-only) git
+
+`git status`, `git diff`, `git log`, `git show`, `git branch`, `git remote -v`, `git fetch`, `git ls-remote`, `git config --get`.
+Use these to check the real state before giving commands. Never assume a branch tip: run `git fetch` and `git log origin/<branch> -5` first.
+
+## Identity and attribution (for the commands you give)
+
+- GitHub user `morteza-azizi`, name `Morteza Azizi`, email `mori.azizi@gmail.com`. Include a `git config user.email` check in the commands if the repo might use another address.
+- Never add `Co-authored-by`, `Signed-off-by`, `Made-with` or any Cursor or agent trailer, signature or footer to commit messages, PR titles or PR bodies. Keep suggested messages plain.
+- Do not tell the user to commit unrelated changes (for example draft posts) or the regenerated `public/` folder. If `hugo server` was run, remind them to `git restore public` first.
+
+## If the user seems to ask for a commit or push
+
+"Commit", "push", "ship it" and similar words still mean: give the commands, do not run them.
+If unsure whether they want the agent to run something, assume NO and give the commands.

@@ -1,0 +1,12 @@
+<Solution>
+  <Folder Name="/01-agent-boundaries/">
+    <Project Path="01-agent-boundaries/FailedMessageAdvisor/FailedMessageAdvisor.csproj" />
+  </Folder>
+  <Folder Name="/02-mcp-server/">
+    <Project Path="02-mcp-server/AdvisorWithMcp/AdvisorWithMcp.csproj" />
+    <Project Path="02-mcp-server/DeadLetterMcp/DeadLetterMcp.csproj" />
+    <Project Path="02-mcp-server/IdentityProbe/IdentityProbe.csproj" />
+    <Project Path="02-mcp-server/QueuePrep/QueuePrep.csproj" />
+    <Project Path="02-mcp-server/ToolDiscovery/ToolDiscovery.csproj" />
+  </Folder>
+</Solution>

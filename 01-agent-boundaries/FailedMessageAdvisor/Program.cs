@@ -95,7 +95,7 @@ static int[] SelectPrompts(string[] args)
         return [number];
     }
 
-    Console.Error.WriteLine("Usage: dotnet run --project src/FailedMessageAdvisor -- [1|2|3|all]");
+    Console.Error.WriteLine("Usage: dotnet run --project 01-agent-boundaries/FailedMessageAdvisor -- [1|2|3|all]");
     Environment.Exit(1);
     return [];
 }
@@ -106,7 +106,7 @@ static string Required(IConfiguration configuration, string name)
     if (string.IsNullOrWhiteSpace(value))
     {
         Console.Error.WriteLine(
-            $"Set {name}. Use an environment variable, or from src/FailedMessageAdvisor run: dotnet user-secrets set {name} \"...\"");
+            $"Set {name}. Use an environment variable, or from 01-agent-boundaries/FailedMessageAdvisor run: dotnet user-secrets set {name} \"...\"");
         Environment.Exit(1);
     }
 
