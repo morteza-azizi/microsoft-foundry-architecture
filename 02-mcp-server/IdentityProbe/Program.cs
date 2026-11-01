@@ -1,4 +1,5 @@
 using System.Reflection;
+using Azure;
 using Azure.Identity;
 using Azure.Messaging.ServiceBus;
 using Microsoft.Extensions.Configuration;
@@ -56,7 +57,7 @@ catch (Exception ex)
 ServiceBusReceivedMessage? first = await ReceiveAsync(receiver, "Receive (peek-lock)");
 if (first is null)
 {
-    Console.WriteLine("Complete: Not attempted");
+    Console.WriteLine("Complete: Not attempted (receive did not return a message)");
 }
 else
 {
@@ -74,7 +75,7 @@ else
 ServiceBusReceivedMessage? second = await ReceiveAsync(receiver, "Receive (peek-lock, for dead-letter)");
 if (second is null)
 {
-    Console.WriteLine("Dead-letter: Not attempted");
+    Console.WriteLine("Dead-letter: Not attempted (receive did not return a message)");
 }
 else
 {
@@ -124,34 +125,26 @@ static async Task<ServiceBusReceivedMessage?> ReceiveAsync(ServiceBusReceiver re
 
 static void Report(string operation, Exception exception)
 {
-    Console.WriteLine($"{operation}: {(IsDenied(exception) ? "Denied" : "Error")}");
-    Console.WriteLine($"  {exception.GetType().Name}: {exception.Message}");
+    Console.WriteLine($"{operation}: {Classify(exception)}");
+    Console.WriteLine(exception);
 }
 
-static bool IsDenied(Exception exception)
+static string Classify(Exception exception)
 {
     for (Exception? current = exception; current is not null; current = current.InnerException)
     {
         if (current is UnauthorizedAccessException)
         {
-            return true;
+            return "Denied";
         }
 
-        if (current is ServiceBusException serviceBus &&
-            serviceBus.Reason.ToString().Contains("Unauthorized", StringComparison.OrdinalIgnoreCase))
+        if (current is RequestFailedException request && request.Status is 401 or 403)
         {
-            return true;
-        }
-
-        if (current.Message.Contains("401", StringComparison.Ordinal) ||
-            current.Message.Contains("Unauthorized", StringComparison.OrdinalIgnoreCase) ||
-            current.Message.Contains("not authorized", StringComparison.OrdinalIgnoreCase))
-        {
-            return true;
+            return "Denied";
         }
     }
 
-    return false;
+    return "Inconclusive";
 }
 
 static string RequiredNamespace(IConfiguration configuration)

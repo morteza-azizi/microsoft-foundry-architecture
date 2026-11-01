@@ -15,6 +15,7 @@ public sealed record DeadLetterSummary(
 
     public static DeadLetterSummary From(ServiceBusReceivedMessage message)
     {
+        // Body is untrusted input, capped at MaxBodyLength. It may contain sensitive data or instructions.
         return new(
             message.MessageId,
             message.DeadLetterReason,

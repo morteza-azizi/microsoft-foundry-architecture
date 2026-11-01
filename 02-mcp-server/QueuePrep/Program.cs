@@ -31,15 +31,24 @@ await using var client = new ServiceBusClient(serviceBusNamespace, credential);
 
 Console.WriteLine($"""
     Queue prep uses the signed-in identity, not the MCP server identity.
-    The signed-in identity needs send and receive. Stop other consumers on {queue} before seeding.
+    The signed-in identity needs send and receive.
     Namespace: {serviceBusNamespace}
     """);
+
+if (command == "seed")
+{
+    string where = queue == OrdersQueue ? "dead-letter sub-queue" : "active queue";
+    Console.WriteLine($"""
+        This seed drains the {where} of '{queue}' before it sends.
+        Each drained message is received and completed, which removes it.
+        Only '{OrdersQueue}' and '{ScratchQueue}' are accepted.
+        """);
+}
 
 switch (command)
 {
     case "snapshot":
-        await SnapshotAsync(client, credential, serviceBusNamespace, queue);
-        break;
+        return await SnapshotAsync(client, credential, serviceBusNamespace, queue);
     case "seed" when queue == OrdersQueue:
         await SeedOrdersAsync(client, args[1]);
         break;
@@ -164,6 +173,7 @@ static async Task DrainAsync(ServiceBusClient client, string queue, bool deadLet
 
     await using ServiceBusReceiver receiver = client.CreateReceiver(queue, options);
     string where = deadLetter ? "dead-letter" : "active";
+    Console.WriteLine($"Draining {queue} {where}. Each message received here is completed and removed.");
     int drained = 0;
 
     while (drained < 50)
@@ -182,45 +192,68 @@ static async Task DrainAsync(ServiceBusClient client, string queue, bool deadLet
     Console.WriteLine($"Drained {drained} message(s) from {queue} {where}.");
     if (drained == 50)
     {
-        Console.WriteLine("Stopped at 50. Run the command again if messages remain.");
+        Console.WriteLine("Stopped at 50. Messages may remain. This seed does not leave the queue holding only the new message.");
     }
 }
 
-static async Task SnapshotAsync(
+static async Task<int> SnapshotAsync(
     ServiceBusClient client,
     DefaultAzureCredential credential,
     string serviceBusNamespace,
     string queue)
 {
+    bool deadLetter = queue == OrdersQueue;
+    string where = deadLetter ? "dead-letter" : "active";
+    long? subQueueCount = null;
+
     try
     {
         var admin = new ServiceBusAdministrationClient(serviceBusNamespace, credential);
         QueueRuntimeProperties properties = await admin.GetQueueRuntimePropertiesAsync(queue);
         Console.WriteLine($"Active message count: {properties.ActiveMessageCount}");
         Console.WriteLine($"Dead-letter message count: {properties.DeadLetterMessageCount}");
+        subQueueCount = deadLetter ? properties.DeadLetterMessageCount : properties.ActiveMessageCount;
     }
     catch (Exception ex)
     {
-        Console.WriteLine($"Runtime counts: not read ({ex.GetType().Name}: {ex.Message})");
-        Console.WriteLine("Peek still runs. Counts use the management plane. Peek uses data-plane receive.");
+        Console.Error.WriteLine("Snapshot failed: the management-plane counts were not read.");
+        Console.Error.WriteLine(ex);
     }
 
-    bool deadLetter = queue == OrdersQueue;
-    ServiceBusReceiverOptions options = deadLetter
-        ? new ServiceBusReceiverOptions { SubQueue = SubQueue.DeadLetter }
-        : new ServiceBusReceiverOptions();
-
-    await using ServiceBusReceiver receiver = client.CreateReceiver(queue, options);
-    IReadOnlyList<ServiceBusReceivedMessage> messages = await receiver.PeekMessagesAsync(10);
-    Console.WriteLine($"Peeked {messages.Count} message(s) from {queue} {(deadLetter ? "dead-letter" : "active")}.");
-
-    foreach (ServiceBusReceivedMessage message in messages)
+    IReadOnlyList<ServiceBusReceivedMessage>? messages = null;
+    try
     {
-        string body = message.Body.ToString();
-        string preview = body.Length <= 200 ? body : $"{body[..200]}... ({body.Length} characters)";
-        Console.WriteLine(
-            $"{message.MessageId}\tdeliveryCount={message.DeliveryCount}\treason={message.DeadLetterReason}\tbody={preview}");
+        ServiceBusReceiverOptions options = deadLetter
+            ? new ServiceBusReceiverOptions { SubQueue = SubQueue.DeadLetter }
+            : new ServiceBusReceiverOptions();
+
+        await using ServiceBusReceiver receiver = client.CreateReceiver(queue, options);
+        messages = await receiver.PeekMessagesAsync(10);
+        Console.WriteLine($"Peeked {messages.Count} message(s) from {queue} {where}.");
+
+        foreach (ServiceBusReceivedMessage message in messages)
+        {
+            string body = message.Body.ToString();
+            string preview = body.Length <= 200 ? body : $"{body[..200]}... ({body.Length} characters)";
+            Console.WriteLine(
+                $"{message.MessageId}\tdeliveryCount={message.DeliveryCount}\treason={message.DeadLetterReason}\tbody={preview}");
+        }
     }
+    catch (Exception ex)
+    {
+        Console.Error.WriteLine("Snapshot failed: peek did not complete.");
+        Console.Error.WriteLine(ex);
+    }
+
+    bool coversEveryMessage = subQueueCount is long count && messages is not null && messages.Count >= count;
+    if (!coversEveryMessage)
+    {
+        Console.Error.WriteLine("Snapshot incomplete. Do not record this output as the queue state before or after a case.");
+        return 1;
+    }
+
+    Console.WriteLine("Snapshot complete.");
+    return 0;
 }
 
 static string RequiredNamespace(IConfiguration configuration)

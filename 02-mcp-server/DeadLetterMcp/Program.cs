@@ -31,6 +31,8 @@ app.Logger.LogInformation(
     serviceBusNamespace,
     string.Join(", ", deadLetter.AllowedQueues),
     deadLetter.OutOfScopeResponse);
+app.Logger.LogWarning(
+    "The /mcp endpoint does not authenticate callers. A caller who can reach this process uses its Service Bus identity.");
 
 app.Use(async (context, next) =>
 {
@@ -87,10 +89,7 @@ static void LogMcpMethod(ILogger logger, string body)
             string tool = parameters.TryGetProperty("name", out JsonElement name)
                 ? name.GetString() ?? ""
                 : "";
-            string arguments = parameters.TryGetProperty("arguments", out JsonElement args)
-                ? args.GetRawText()
-                : "";
-            logger.LogInformation("MCP tools/call {Tool} {Arguments}", tool, arguments);
+            logger.LogInformation("MCP tools/call {Tool}", tool);
             return;
         }
 
