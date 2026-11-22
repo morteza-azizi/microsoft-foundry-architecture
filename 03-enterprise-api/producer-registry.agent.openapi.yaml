@@ -1,0 +1,43 @@
+openapi: 3.0.3
+info:
+  title: Producer Registry (agent view)
+  version: "2"
+  description: >
+    The part of the Producer Registry the agent may call. It has one operation.
+    The API also has a list operation and a notification operation. They are not here on purpose.
+servers:
+  # Path A: the API's own URL. Path B: the API Management URL, for example
+  # https://<apim-name>.azure-api.net/producer-registry
+  - url: https://<host>
+paths:
+  /producers/{queue}:
+    get:
+      operationId: getProducerForQueue
+      summary: Returns the team that owns the messages on one queue.
+      parameters:
+        - name: queue
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: The owning team. A field is null when the registry has no value for it.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [queue, owningTeam, contactAlias]
+                properties:
+                  queue:
+                    type: string
+                  owningTeam:
+                    type: string
+                    nullable: true
+                  contactAlias:
+                    type: string
+                    nullable: true
+        "404":
+          description: No producer is registered for this queue.
+        "503":
+          description: The registry is not available. The Retry-After header gives a delay in seconds.
