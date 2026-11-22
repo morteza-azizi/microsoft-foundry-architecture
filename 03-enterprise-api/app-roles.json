@@ -1,0 +1,18 @@
+[
+  {
+    "allowedMemberTypes": ["Application"],
+    "description": "Read the owning team of a queue.",
+    "displayName": "ProducerRegistry.Read",
+    "id": "152ef8c3-76e7-4e74-9ac1-1994748195b6",
+    "isEnabled": true,
+    "value": "ProducerRegistry.Read"
+  },
+  {
+    "allowedMemberTypes": ["Application"],
+    "description": "Send a notification to the owning team of a queue.",
+    "displayName": "ProducerRegistry.Notify",
+    "id": "2e22628e-d3c8-4070-bf04-59adaa3b5191",
+    "isEnabled": true,
+    "value": "ProducerRegistry.Notify"
+  }
+]

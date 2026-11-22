@@ -1,0 +1,37 @@
+<!--
+  Path B. Apply this at the API level of the "producer-registry" API in API Management.
+  Replace <tenant-id> and the audience if yours differs.
+  Not run yet. Check each element against the API Management policy reference before you rely on it.
+-->
+<policies>
+  <inbound>
+    <base />
+    <!-- Reject a token that is not for this API, or that does not carry the Read role. -->
+    <validate-azure-ad-token tenant-id="<tenant-id>" failed-validation-httpcode="401" failed-validation-error-message="Unauthorized.">
+      <audiences>
+        <audience>api://producer-registry</audience>
+      </audiences>
+      <required-claims>
+        <claim name="roles" match="any">
+          <value>ProducerRegistry.Read</value>
+        </claim>
+      </required-claims>
+    </validate-azure-ad-token>
+    <!-- Per caller limit. The key is the caller's object id from the token. -->
+    <rate-limit-by-key calls="5" renewal-period="60"
+      counter-key="@(context.Request.Headers.GetValueOrDefault("Authorization","").AsJwt()?.Claims.GetValueOrDefault("oid", "anonymous"))" />
+    <!-- Give every request a correlation id if the caller did not send one. -->
+    <set-header name="x-correlation-id" exists-action="skip">
+      <value>@(Guid.NewGuid().ToString())</value>
+    </set-header>
+  </inbound>
+  <backend>
+    <base />
+  </backend>
+  <outbound>
+    <base />
+  </outbound>
+  <on-error>
+    <base />
+  </on-error>
+</policies>

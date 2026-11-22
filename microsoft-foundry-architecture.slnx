@@ -9,4 +9,8 @@
     <Project Path="02-mcp-server/QueuePrep/QueuePrep.csproj" />
     <Project Path="02-mcp-server/ToolDiscovery/ToolDiscovery.csproj" />
   </Folder>
+  <Folder Name="/03-enterprise-api/">
+    <Project Path="03-enterprise-api/AdvisorWithRegistry/AdvisorWithRegistry.csproj" />
+    <Project Path="03-enterprise-api/ProducerRegistry/ProducerRegistry.csproj" />
+  </Folder>
 </Solution>

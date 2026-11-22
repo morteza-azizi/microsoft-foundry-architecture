@@ -11,3 +11,5 @@ local.settings.json
 appsettings.local.json
 appsettings.*.local.json
 secrets.json
+03-enterprise-api/apim-policy.local.xml
+03-enterprise-api/RUN.md
